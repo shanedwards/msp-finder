@@ -1,18 +1,11 @@
-import { requireAuth } from "@/lib/auth";
-import { DashboardMenu } from "./_components/dashboard-menu";
+import { MspDashboard } from "./_components/msp-dashboard";
 
-export default async function DashboardPage() {
-  const user = await requireAuth();
+export default function DashboardPage() {
   return (
-    <>
-      <div className="flex justify-end p-4">
-        <DashboardMenu />
+    <main className="min-h-screen px-4 pb-12 pt-6">
+      <div className="max-w-7xl mx-auto">
+        <MspDashboard />
       </div>
-      <main className="min-h-screen flex flex-col items-center">
-        
-        <h1 className="text-4xl font-bold mb-4">Dashboard</h1>
-        <p>Welcome, {user.email}</p>
-      </main>
-    </>
+    </main>
   );
 }

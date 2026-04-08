@@ -1,25 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import DashboardPage from "@/app/dashboard/page";
 
-const mockUser = { email: "user@example.com" };
-
-jest.mock("@/lib/auth", () => ({
-  requireAuth: jest.fn(() => Promise.resolve(mockUser)),
-}));
-
 jest.mock("@/app/dashboard/_components/dashboard-menu", () => ({
   DashboardMenu: () => <div data-testid="dashboard-menu">Menu</div>,
 }));
 
+jest.mock("@/app/dashboard/_components/msp-dashboard", () => ({
+  MspDashboard: () => <div data-testid="msp-dashboard">MSP Dashboard</div>,
+}));
+
 describe("Dashboard page", () => {
-  it("renders heading and welcome message with user email", async () => {
+  it("renders msp dashboard shell", async () => {
     const content = await DashboardPage();
     render(content);
 
-    expect(
-      screen.getByRole("heading", { name: /Dashboard/i })
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Welcome, user@example\.com/)).toBeInTheDocument();
+    expect(screen.getByTestId("msp-dashboard")).toBeInTheDocument();
   });
 
   it("renders dashboard menu", async () => {

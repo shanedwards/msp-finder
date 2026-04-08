@@ -1,11 +1,13 @@
-import { render, screen } from "@testing-library/react";
 import Home from "@/app/page";
+import { redirect } from "next/navigation";
+
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(),
+}));
 
 describe("Home page", () => {
-  it("renders hello world heading", () => {
-    render(<Home />);
-    expect(
-      screen.getByRole("heading", { name: "Hello, world!" })
-    ).toBeInTheDocument();
+  it("redirects to dashboard", () => {
+    Home();
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 });

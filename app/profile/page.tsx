@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { DashboardMenu } from "@/app/dashboard/_components/dashboard-menu";
 import { ProfileImageUpload } from "@/app/profile/_components/profile-image-upload";
 import { FormDisplayField } from "@/components/form";
@@ -10,15 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, error } = useProfile();
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/auth/login");
-    }
-  }, [user, authLoading, router]);
 
   if (authLoading || profileLoading) {
     return (
@@ -36,10 +27,6 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
   return (
     <>
       <div className="flex justify-end p-4">
@@ -48,7 +35,13 @@ export default function ProfilePage() {
       <main className="min-h-screen flex flex-col items-center">
         <div className="w-full max-w-md">
           <h1 className="text-4xl font-bold mb-6">Profile</h1>
-          {error ? (
+          {!user ? (
+            <div className="border rounded p-4">
+              <p className="text-gray-700">
+                Open access mode is enabled. Signed-in profile details are unavailable.
+              </p>
+            </div>
+          ) : error ? (
             <div className="border rounded p-4">
               <p className="text-red-500 mb-2">Error loading profile</p>
               <p className="text-sm text-gray-600">{error}</p>

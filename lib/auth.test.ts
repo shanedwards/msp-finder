@@ -13,17 +13,9 @@ jest.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
-const mockRedirect = jest.fn();
-jest.mock("next/navigation", () => ({
-  redirect: (url: string) => mockRedirect(url),
-}));
-
 describe("lib/auth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRedirect.mockImplementation(() => {
-      throw new Error("NEXT_REDIRECT");
-    });
   });
 
   describe("verifyEmailOtp", () => {
@@ -97,21 +89,18 @@ describe("lib/auth", () => {
 
       const result = await requireAuth();
       expect(result).toEqual(user);
-      expect(mockRedirect).not.toHaveBeenCalled();
     });
 
-    it("redirects to login when no user", async () => {
+    it("returns null when no user", async () => {
       mockGetClaims.mockResolvedValue({ data: { claims: null } });
 
-      await expect(requireAuth()).rejects.toThrow("NEXT_REDIRECT");
-      expect(mockRedirect).toHaveBeenCalledWith("/auth/login");
+      await expect(requireAuth()).resolves.toBeNull();
     });
 
-    it("redirects to login when getClaims returns undefined data", async () => {
+    it("returns null when getClaims returns undefined data", async () => {
       mockGetClaims.mockResolvedValue({ data: undefined });
 
-      await expect(requireAuth()).rejects.toThrow("NEXT_REDIRECT");
-      expect(mockRedirect).toHaveBeenCalledWith("/auth/login");
+      await expect(requireAuth()).resolves.toBeNull();
     });
   });
 });

@@ -23,7 +23,11 @@ jest.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     storage: {
       from: () => ({
-        upload: (_path: string, _file: File) => mockUpload(),
+        upload: (path: string, file: File) => {
+          void path;
+          void file;
+          return mockUpload();
+        },
         getPublicUrl: (path: string) => mockGetPublicUrl(path),
       }),
     },

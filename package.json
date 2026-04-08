@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "test": "jest",
@@ -18,13 +18,17 @@
     "dev:reset": "supabase db reset"
   },
   "dependencies": {
+    "@langchain/langgraph": "^1.2.7",
     "@supabase/ssr": "latest",
-    "@supabase/supabase-js": "latest",
+    "@supabase/supabase-js": "^2.101.1",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "next": "latest",
+    "openai": "^6.33.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^3.3.0"
+    "tailwind-merge": "^3.3.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

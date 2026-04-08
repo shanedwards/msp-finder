@@ -1,82 +1,113 @@
-# Next.js + Supabase Starter
+# Managed Service Provider Finder (MVP)
 
-This is a Next.js 15+ App Router starter integrated with Supabase Auth (cookie-based sessions via `@supabase/ssr`).
+Internal sales tool built on the existing Next.js + Supabase starter.
 
-## Development
+## What It Does
+- Runs a bounded AI research pipeline to find MSPs.
+- Persists companies, capabilities, size evidence, sources, reviews, and scores in Supabase.
+- Supports human verification (`approved` / `needs_review` / `rejected`).
+- Keeps **internal confidence** separate from **user score (0-10)**.
+- Exports table results to `.xlsx` with required formatting.
 
-1) Install dependencies:
+## Required Output Table Columns
+- `Company Name`
+- `Website`
+- `Evidence`
+- `Geography`
+- `Employee Count`
+- `Score (0-10)`
+
+`GET /api/companies` returns:
+
+```ts
+type CompanyRow = {
+  id: string;
+  companyName: string;
+  website: string | null;
+  evidence: string;
+  geography: string | null;
+  employeeCount: string;
+  score: number | null;
+};
+```
+
+## Setup
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2) Configure environment:
-
-Copy `.env.example` to `.env.local` and fill the values from your Supabase Project Settings → API:
+2. Configure environment:
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+OPENAI_API_KEY=...
+ENABLE_MOCK_MODE=false
 ```
 
-3) Run the app in dev mode:
-
-```bash
-npm run dev
-```
-
-Optional checks/builds:
-
-```bash
-npm run lint
-npm run build
-```
-
-## Supabase CLI
-
-The Supabase CLI is included in devDependencies. For pushing migrations to your hosted project, log in and link once:
-
-```bash
-npx supabase login
-npx supabase link
-```
-
-### Local Supabase (containers)
-
-Requires Docker. Start/stop local stack:
-
-```bash
-npm run supabase:start
-npm run supabase:stop
-```
-
-## Database Migrations
-
-Scripts are available in `package.json` to help generate and apply migrations.
-
-- Generate a new migration (diff current DB → SQL file). Provide a descriptive name:
-
-```bash
-npm run db:migrate:generate -- --name add_profile_fields
-```
-
-You can pass extra flags (e.g., `--schema public`).
-
-- Apply migrations to the linked project:
+3. Run migrations:
 
 ```bash
 npm run db:migrate:run
 ```
 
-- Reset local dev database and re-apply migrations:
+4. Start development server:
 
 ```bash
-npm run db:reset
+npm run dev
 ```
 
+## MVP Workflow (LangGraph)
+Pipeline node order:
+1. `intake_node`
+2. `search_plan_node`
+3. `web_research_node`
+4. `candidate_extraction_node`
+5. `entity_resolution_node`
+6. `verification_node`
+7. `confidence_scoring_node`
+8. `persistence_node`
+9. `export_ready_node`
+
+## Deterministic Verification Rules
+Final verification is enforced in code (not model-only):
+- Reject if not a real MSP or classified as recruiter/directory/software vendor.
+- Reject if website is missing/invalid.
+- Reject if selected state/city/employee/capability filters are not satisfied.
+- Reject if required AWS/Azure partner/reseller evidence is missing.
+
+Possible outputs:
+- `verified`
+- `needs_review`
+- `rejected`
+
+## API Routes
+- `POST /api/search`
+- `GET /api/companies`
+- `GET /api/companies/[id]`
+- `POST /api/companies/[id]/verify`
+- `POST /api/companies/[id]/score`
+- `POST /api/exports`
+
+## Search Bounds (Sync MVP)
+- `MAX_SEARCH_QUERIES = 4`
+- `MAX_SOURCES_FETCHED = 16`
+- `MAX_CANDIDATES = 24`
+- `MAX_FINAL_RESULTS = 12`
+
+## Mock Mode
+Set:
+
+```dotenv
+ENABLE_MOCK_MODE=true
+```
+
+When enabled, search uses deterministic fake MSP candidates so UI, scoring, and export can be tested without live web research.
+
 ## Notes
-
-- Ensure `.env.local` has the two public keys: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-- For protected pages/components, see patterns in `lib/auth.ts` and `lib/supabase/*`.
-- If you use local containers, make sure Docker is running.
-
+- `Evidence` in table rows is generated from saved source evidence (1-3 short sentences).
+- Employee count is shown as `"Unknown"` when source evidence is insufficient.
+- State filtering applies to `headquarters_state`.

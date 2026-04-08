@@ -9,21 +9,21 @@ describe("DashboardMenu", () => {
 
   it("opens dropdown when Menu is clicked", () => {
     render(<DashboardMenu />);
-    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
-    expect(screen.getByRole("link", { name: "Profile" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
-      "/profile"
+      "/dashboard"
     );
   });
 
-  it("closes dropdown when Profile link is clicked", () => {
+  it("closes dropdown when Dashboard link is clicked", () => {
     render(<DashboardMenu />);
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
-    expect(screen.getByRole("link", { name: "Profile" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: "Profile" }));
-    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "Dashboard" }));
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
   });
 
   it("closes dropdown when clicking outside", () => {
@@ -34,8 +34,8 @@ describe("DashboardMenu", () => {
       </div>
     );
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
-    expect(screen.getByRole("link", { name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByTestId("outside"));
-    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
   });
 });

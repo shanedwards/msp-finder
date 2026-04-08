@@ -1,14 +1,13 @@
-import { render, screen } from "@testing-library/react";
 import Page from "@/app/auth/login/page";
+import { redirect } from "next/navigation";
 
-jest.mock("@/app/auth/login/_components/login-form", () => ({
-  LoginForm: () => <div data-testid="login-form">LoginForm</div>,
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(),
 }));
 
 describe("Login page", () => {
-  it("renders LoginForm", () => {
-    render(<Page />);
-    expect(screen.getByTestId("login-form")).toBeInTheDocument();
-    expect(screen.getByText("LoginForm")).toBeInTheDocument();
+  it("redirects to dashboard", () => {
+    Page();
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 });

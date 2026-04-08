@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { AuthButton } from "@/components/auth-button";
+import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
@@ -13,8 +15,8 @@ jest.mock("@/hooks/use-profile", () => ({
   useProfile: jest.fn(),
 }));
 
-const mockUseAuth = require("@/hooks/use-auth").useAuth as jest.Mock;
-const mockUseProfile = require("@/hooks/use-profile").useProfile as jest.Mock;
+const mockUseAuth = useAuth as jest.Mock;
+const mockUseProfile = useProfile as jest.Mock;
 
 describe("AuthButton", () => {
   beforeEach(() => {
