@@ -16,6 +16,7 @@ export type CompanyRow = {
   employeeCount: string;
   companySizeTier: CompanySizeTier | null;
   score: number | null;
+  notes: string | null;
   verificationStatus: VerificationStatus;
   createdAt: string;
   latestRunId: string | null;
@@ -132,6 +133,7 @@ export type CompanyDetail = {
   employeeCount: string;
   companySizeTier: CompanySizeTier | null;
   score: number | null;
+  notes: string | null;
   verificationStatus: VerificationStatus;
   verificationReason: string | null;
   internalConfidence: number;

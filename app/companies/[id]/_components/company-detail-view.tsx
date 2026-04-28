@@ -58,6 +58,8 @@ export function CompanyDetailView({ companyId }: CompanyDetailViewProps) {
   const [loading, setLoading] = useState(true);
   const [savingScore, setSavingScore] = useState(false);
   const [scoreInput, setScoreInput] = useState("");
+  const [notesInput, setNotesInput] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -75,6 +77,7 @@ export function CompanyDetailView({ companyId }: CompanyDetailViewProps) {
       const payload = (await response.json()) as CompanyDetail;
       setDetail(payload);
       setScoreInput(payload.score === null ? "" : String(payload.score));
+      setNotesInput(payload.notes ?? "");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to load company.");
     } finally {
@@ -124,6 +127,34 @@ export function CompanyDetailView({ companyId }: CompanyDetailViewProps) {
       setSavingScore(false);
     }
   }, [companyId, scoreValue]);
+
+  const handleSaveNotes = useCallback(async () => {
+    const notes = notesInput.trim() || null;
+
+    setSavingNotes(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    try {
+      const response = await fetch(`/api/companies/${companyId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Failed to save notes.");
+      }
+
+      setDetail((prev) => (prev ? { ...prev, notes } : prev));
+      setStatusMessage("Notes saved.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to save notes.");
+    } finally {
+      setSavingNotes(false);
+    }
+  }, [companyId, notesInput]);
 
   if (loading) {
     return (
@@ -313,6 +344,27 @@ export function CompanyDetailView({ companyId }: CompanyDetailViewProps) {
               className="w-full bg-blue-600 text-white rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
             >
               {savingScore ? "Saving…" : "Save Score"}
+            </button>
+          </div>
+          <div className="px-4 pb-4 pt-1 space-y-1.5 border-t border-slate-100">
+            <label htmlFor="notes" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Notes
+            </label>
+            <textarea
+              id="notes"
+              rows={4}
+              value={notesInput}
+              onChange={(e) => setNotesInput(e.target.value)}
+              placeholder="Add notes about this lead…"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+            <button
+              type="button"
+              disabled={savingNotes}
+              onClick={() => void handleSaveNotes()}
+              className="w-full bg-slate-700 text-white rounded-lg px-3 py-2 text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
+            >
+              {savingNotes ? "Saving…" : "Save Notes"}
             </button>
           </div>
         </section>

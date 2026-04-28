@@ -1,6 +1,7 @@
 import { searchRequestSchema } from "@/lib/msp/schemas";
 import { runSearchWorkflow } from "@/lib/msp/workflow/graph";
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +15,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Search failed.",
-      },
-      { status: 400 },
-    );
+    const message =
+      error instanceof ZodError
+        ? (error.issues[0]?.message ?? "Invalid request.")
+        : error instanceof Error
+          ? error.message
+          : "Search failed.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

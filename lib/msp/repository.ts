@@ -74,6 +74,7 @@ type CompanyWithRelations = {
   headquarters_city: string | null;
   headquarters_state: string | null;
   user_score: number | string | null;
+  user_notes: string | null;
   verification_status: "verified" | "needs_review" | "rejected";
   verification_reason: string | null;
   internal_confidence_score: number;
@@ -362,6 +363,7 @@ async function listCompaniesWithRelations(limit: number): Promise<CompanyWithRel
       headquarters_city,
       headquarters_state,
       user_score,
+      user_notes,
       verification_status,
       verification_reason,
       internal_confidence_score,
@@ -495,6 +497,7 @@ export async function listCompanyRows(
         ),
         companySizeTier: (size?.company_size_tier ?? null) as CompanySizeTier | null,
         score: toNumberOrNull(company.user_score),
+        notes: company.user_notes ?? null,
         verificationStatus: company.verification_status,
         createdAt: company.created_at,
         latestRunId: company.latest_research_run_id ?? null,
@@ -516,6 +519,7 @@ export async function getCompanyDetail(companyId: string): Promise<CompanyDetail
       headquarters_city,
       headquarters_state,
       user_score,
+      user_notes,
       verification_status,
       verification_reason,
       internal_confidence_score,
@@ -571,6 +575,7 @@ export async function getCompanyDetail(companyId: string): Promise<CompanyDetail
     ),
     companySizeTier: (size?.company_size_tier ?? null) as CompanySizeTier | null,
     score: toNumberOrNull(company.user_score),
+    notes: company.user_notes ?? null,
     verificationStatus: company.verification_status,
     verificationReason: company.verification_reason,
     internalConfidence: company.internal_confidence_score,
@@ -728,6 +733,22 @@ export async function saveCompanyScore(params: {
 
   if (updateError) {
     throw new Error(updateError.message);
+  }
+}
+
+export async function saveCompanyNotes(params: {
+  companyId: string;
+  notes: string | null;
+}): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("msp_companies")
+    .update({ user_notes: params.notes })
+    .eq("id", params.companyId);
+
+  if (error) {
+    throw new Error(error.message);
   }
 }
 

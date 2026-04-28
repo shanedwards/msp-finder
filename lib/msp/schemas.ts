@@ -133,9 +133,14 @@ export const extractedCandidatesResponseSchema = z.object({
   companies: z.array(extractedCandidateSchema).max(60).default([]),
 });
 
-export const searchRequestSchema = z.object({
-  filters: searchFiltersInputSchema.optional(),
-});
+export const searchRequestSchema = z
+  .object({
+    filters: searchFiltersInputSchema.optional(),
+  })
+  .refine(
+    (data) => (data.filters?.mustSupportAws ?? false) || (data.filters?.mustSupportAzure ?? false),
+    { message: "At least one of 'Must support AWS' or 'Must support Azure' must be selected." },
+  );
 
 export const verifyCompanyRequestSchema = z.object({
   decision: z.enum(["approved", "rejected", "needs_review"]),

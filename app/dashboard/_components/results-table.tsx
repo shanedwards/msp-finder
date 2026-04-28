@@ -134,6 +134,7 @@ function InlineScoreCell({
   );
 }
 
+
 const DISPLAY_LIMIT_OPTIONS = [25, 50, 100, 250] as const;
 type DisplayLimit = (typeof DISPLAY_LIMIT_OPTIONS)[number] | "all";
 

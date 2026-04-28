@@ -64,7 +64,7 @@ export function buildWebResearchPrompt(params: {
 
   const lines: string[] = [
     // --- Objective ---
-    "You are a research assistant finding real U.S. Managed Service Providers (MSPs) for an internal sales team.",
+    "You are a research assistant finding real U.S. Managed Services Providers (MSPs) for an internal sales team.",
     `Find as many MSP companies as possible whose PRIMARY HEADQUARTERS is in: ${locationPhrase}.`,
     `CRITICAL: ONLY include companies headquartered in ${targetStates}. Exclude national MSPs that just have offices there.`,
     "",
@@ -74,40 +74,32 @@ export function buildWebResearchPrompt(params: {
     `Step 1 — Run all of these searches and collect every MSP company name + website URL you find in the results:`,
     ...queries.map((q, i) => `  Search ${i + 1}: "${q}"`),
     ...(searchContext.mustSupportAws ? [
-      `  Search also: AWS Partner Network directory at https://partners.aws.amazon.com/search for "${locationPhrase} managed services"`,
+      `  Search also: AWS Partner Network directory at https://partners.amazonaws.com/search/partners for "${locationPhrase} managed services"`,
     ] : []),
     ...(searchContext.mustSupportAzure ? [
       `  Search also: Microsoft partner directory at https://appsource.microsoft.com/en-us/marketplace/partner-dir for managed services in "${locationPhrase}"`,
     ] : []),
+    `  Search also: general web search for "${locationPhrase} managed services provider" to find any additional MSPs not listed in partner directories`,
     "",
     "Step 2 — From all search results, compile a list of unique company names and their websites.",
     "  - Use the website URL shown directly in search results whenever possible.",
     "  - Only search for a missing website if the company looks like a strong MSP lead and you have not used many searches yet.",
-    "  - NEVER visit individual company websites just to confirm — use what is visible in search snippets.",
+    "  - Visit individual company website homepage, services page, and/or solutions page to confirm and collect information about AWS Support, Azure Support, AWS Reseller, and Azure CSP.",
     "",
-    "Step 3 — For each company on your list, search LinkedIn to find their employee count:",
-    `  - Search: "[company name] site:linkedin.com/company" for each company`,
-    "  - LinkedIn search snippets usually show employee count (e.g. '11-50 employees', '51-200 employees').",
-    "  - You do not need to open the LinkedIn page — the snippet alone is enough.",
-    "  - Classify using: micro=1-10, small=11-75, mid=76-300, large=300+",
-    "  - If LinkedIn shows nothing for a company, set companySizeTier to null.",
-    "",
-    "Step 4 — For each company on your list, fill in the remaining JSON fields:",
-    "  - isMsp: true if the company name or search snippet clearly indicates managed IT services.",
-    "  - awsSupport / azureSupport: true if search snippet or website title mentions AWS, Azure, or Microsoft partner.",
+    "Step 3 — For each company on your list, fill in the remaining JSON fields:",
+    "  - isMsp: true if the company name, search snippet, homepage, services page, or solutions pages clearly indicates managed services provider for AWS and/or Azure, or is AWS reseller or Azure CSP.",
+    "  - awsSupport / azureSupport: true if search snippet, website title, homepage, services page, or solutions page mentions AWS and/or Azure managed services provider..",
     "  - headquartersState: use the state visible in the search result. If unclear, use the target state.",
     "",
 
     // --- MSP definition ---
     "MSP DEFINITION — isMsp: true when:",
-    "- Company sells ongoing managed IT services (help desk, monitoring, security, network management)",
-    "- Managed services is a primary offering, not a side service",
+    "- Company sells ongoing managed AWS and/or Azure services",
     "",
 
     // --- Disqualifiers ---
     "DISQUALIFIERS — isMsp: false:",
     '- Recruiters / staffing firms → disqualifierType: "recruiter"',
-    '- Software-only vendors → disqualifierType: "software_vendor"',
     '- Directory or listing sites → disqualifierType: "directory"',
     "",
 

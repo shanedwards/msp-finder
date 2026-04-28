@@ -248,6 +248,11 @@ export function MspDashboard() {
   }, []);
 
   const handleRunSearch = useCallback(async () => {
+    if (!filters.mustSupportAws && !filters.mustSupportAzure) {
+      setErrorMessage("Please select at least one of 'Must support AWS' or 'Must support Azure' before running a search.");
+      return;
+    }
+
     // Always snapshot the current filter panel state before running so the
     // user doesn't need to click "Apply Filters" separately first.
     const currentFilters = filters;
@@ -345,6 +350,7 @@ export function MspDashboard() {
       prev.map((row) => (row.id === id ? { ...row, score } : row)),
     );
   }, []);
+
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
