@@ -647,6 +647,7 @@ export type ScoredExample = {
   headquartersState: string | null;
   evidenceSummary: string;
   userScore: number;
+  notes: string | null;
   awsSupport: boolean;
   azureSupport: boolean;
 };
@@ -669,6 +670,7 @@ export async function getHighScoredExamples(params: {
       headquarters_state,
       evidence_summary,
       user_score,
+      user_notes,
       msp_capabilities (
         aws_support,
         azure_support
@@ -703,10 +705,92 @@ export async function getHighScoredExamples(params: {
       headquartersState: row.headquarters_state ?? null,
       evidenceSummary: row.evidence_summary ?? "",
       userScore: toNumberOrNull(row.user_score) ?? minScore,
+      notes: (row as { user_notes?: string | null }).user_notes ?? null,
       awsSupport: Boolean(cap?.aws_support),
       azureSupport: Boolean(cap?.azure_support),
     };
   });
+}
+
+export async function getLowScoredExamples(params: {
+  states: string[];
+  maxScore?: number;
+  limit?: number;
+}): Promise<ScoredExample[]> {
+  const supabase = createAdminClient();
+  const maxScore = params.maxScore ?? 3;
+  const limit = params.limit ?? 5;
+
+  let query = supabase
+    .from("msp_companies")
+    .select(`
+      company_name,
+      website,
+      headquarters_city,
+      headquarters_state,
+      evidence_summary,
+      user_score,
+      user_notes,
+      msp_capabilities (
+        aws_support,
+        azure_support
+      )
+    `)
+    .lte("user_score", maxScore)
+    .not("user_score", "is", null)
+    .order("user_score", { ascending: true })
+    .limit(limit);
+
+  if (params.states.length > 0) {
+    query = query.in("headquarters_state", params.states);
+  }
+
+  const { data } = await query;
+  if (!data || data.length === 0) {
+    if (params.states.length > 0) {
+      return getLowScoredExamples({ states: [], maxScore, limit });
+    }
+    return [];
+  }
+
+  return data.map((row) => {
+    const cap = Array.isArray(row.msp_capabilities)
+      ? row.msp_capabilities[0]
+      : row.msp_capabilities;
+    return {
+      companyName: row.company_name,
+      website: row.website ?? null,
+      headquartersCity: row.headquarters_city ?? null,
+      headquartersState: row.headquarters_state ?? null,
+      evidenceSummary: row.evidence_summary ?? "",
+      userScore: toNumberOrNull(row.user_score) ?? maxScore,
+      notes: (row as { user_notes?: string | null }).user_notes ?? null,
+      awsSupport: Boolean(cap?.aws_support),
+      azureSupport: Boolean(cap?.azure_support),
+    };
+  });
+}
+
+export async function getKnownWebsiteDomains(states: string[]): Promise<string[]> {
+  const supabase = createAdminClient();
+
+  let query = supabase
+    .from("msp_companies")
+    .select("website_domain")
+    .not("website_domain", "is", null);
+
+  if (states.length > 0) {
+    query = query.in("headquarters_state", states);
+  }
+
+  const { data } = await query;
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  return data
+    .map((row) => (row as { website_domain: string | null }).website_domain)
+    .filter((d): d is string => Boolean(d));
 }
 
 export async function saveCompanyScore(params: {

@@ -115,6 +115,7 @@ export type SearchPipelineState = {
   filters: NormalizedSearchFilters;
   searchQueries: string[];
   researchPayloads: string[];
+  knownDomains: string[];
   extractedCandidates: ExtractedCandidate[];
   dedupedCandidates: ExtractedCandidate[];
   evaluatedCandidates: EvaluatedCandidate[];

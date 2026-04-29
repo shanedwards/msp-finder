@@ -42,12 +42,16 @@ export function buildSearchQueries(filters: NormalizedSearchFilters): string[] {
   return queries.slice(0, MAX_SEARCH_QUERIES);
 }
 
+const MAX_EXCLUDED_DOMAINS = 30;
+
 export function buildWebResearchPrompt(params: {
   filters: NormalizedSearchFilters;
   queries: string[];
   scoredExamples?: ScoredExample[];
+  lowScoredExamples?: ScoredExample[];
+  knownDomains?: string[];
 }): string {
-  const { filters, queries, scoredExamples = [] } = params;
+  const { filters, queries, scoredExamples = [], lowScoredExamples = [], knownDomains = [] } = params;
 
   const searchContext = {
     states: filters.states.length > 0 ? filters.states : ["United States"],
@@ -112,6 +116,11 @@ export function buildWebResearchPrompt(params: {
     `- Return up to ${MAX_CANDIDATES} companies. Quantity matters — include every MSP you found, even if evidence is thin.`,
     "- Return ONLY raw JSON. No markdown, no code fences, no explanation.",
     "",
+    ...(knownDomains.length > 0 ? [
+      `EXCLUDED DOMAINS — these companies are already in our database. Do NOT return any company whose website matches one of these domains:`,
+      knownDomains.slice(0, MAX_EXCLUDED_DOMAINS).join(", "),
+      "",
+    ] : []),
   ];
 
   // Extra criteria gets its own section so the model treats it as a priority
@@ -178,7 +187,28 @@ export function buildWebResearchPrompt(params: {
         const summary = ex.evidenceSummary
           ? ` — ${ex.evidenceSummary.slice(0, 120)}`
           : "";
-        return `Example ${i + 1}: ${ex.companyName}${loc ? ` (${loc})` : ""}${cloud ? ` | ${cloud}` : ""}${summary}`;
+        const note = ex.notes ? ` [note: ${ex.notes.slice(0, 100)}]` : "";
+        return `Example ${i + 1}: ${ex.companyName}${loc ? ` (${loc})` : ""}${cloud ? ` | ${cloud}` : ""}${summary}${note}`;
+      }),
+    );
+  }
+
+  if (lowScoredExamples.length > 0) {
+    lines.push(
+      "",
+      "LOW-VALUE EXAMPLES — these companies were rated poorly (3 or below) by our team. Avoid returning companies like these.",
+      "Use them as a reference for the TYPE of company we do NOT want.",
+      "",
+      ...lowScoredExamples.map((ex, i) => {
+        const loc = [ex.headquartersCity, ex.headquartersState].filter(Boolean).join(", ");
+        const cloud = [ex.awsSupport && "AWS", ex.azureSupport && "Azure"]
+          .filter(Boolean)
+          .join(" + ");
+        const summary = ex.evidenceSummary
+          ? ` — ${ex.evidenceSummary.slice(0, 120)}`
+          : "";
+        const note = ex.notes ? ` [note: ${ex.notes.slice(0, 100)}]` : "";
+        return `Bad Example ${i + 1}: ${ex.companyName}${loc ? ` (${loc})` : ""}${cloud ? ` | ${cloud}` : ""}${summary}${note}`;
       }),
     );
   }

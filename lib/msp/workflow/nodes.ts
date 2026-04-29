@@ -3,7 +3,7 @@ import { calculateInternalConfidence } from "@/lib/msp/confidence";
 import { composeEvidenceSummaryForEvaluated } from "@/lib/msp/evidence";
 import { getWebsiteDomain, normalizeCompanyName } from "@/lib/msp/formatting";
 import { buildMockCandidates } from "@/lib/msp/mock-data";
-import { getHighScoredExamples, upsertEvaluatedCandidate } from "@/lib/msp/repository";
+import { getHighScoredExamples, getKnownWebsiteDomains, getLowScoredExamples, upsertEvaluatedCandidate } from "@/lib/msp/repository";
 import {
   extractedCandidatesResponseSchema,
   ExtractedCandidateFromSchema,
@@ -384,10 +384,12 @@ async function lookupWebsiteForCandidate(
   }
 }
 
-async function runWebResearchCall(state: SearchPipelineState): Promise<string> {
-  const scoredExamples = await getHighScoredExamples({
-    states: state.filters.states,
-  }).catch(() => []);
+async function runWebResearchCall(state: SearchPipelineState): Promise<{ text: string; knownDomains: string[] }> {
+  const [scoredExamples, lowScoredExamples, knownDomains] = await Promise.all([
+    getHighScoredExamples({ states: state.filters.states }).catch(() => []),
+    getLowScoredExamples({ states: state.filters.states }).catch(() => []),
+    getKnownWebsiteDomains(state.filters.states).catch(() => []),
+  ]);
 
   if (scoredExamples.length > 0) {
     console.log(
@@ -396,10 +398,23 @@ async function runWebResearchCall(state: SearchPipelineState): Promise<string> {
     );
   }
 
+  if (lowScoredExamples.length > 0) {
+    console.log(
+      `[web_research] injecting ${lowScoredExamples.length} low-scored example(s) into prompt:`,
+      lowScoredExamples.map((e) => `${e.companyName} (score ${e.userScore})`).join(", "),
+    );
+  }
+
+  if (knownDomains.length > 0) {
+    console.log(`[web_research] ${knownDomains.length} known domain(s) will be excluded from results`);
+  }
+
   const prompt = buildWebResearchPrompt({
     filters: state.filters,
     queries: state.searchQueries,
     scoredExamples,
+    lowScoredExamples,
+    knownDomains,
   });
 
   const client = getOpenAiClient();
@@ -416,7 +431,7 @@ async function runWebResearchCall(state: SearchPipelineState): Promise<string> {
     throw new Error("OpenAI web research returned an empty response.");
   }
 
-  return text;
+  return { text, knownDomains };
 }
 
 function inferSizeTierFromCount(
@@ -575,10 +590,11 @@ export async function webResearchNode(
     };
   }
 
-  const payload = await runWebResearchCall(state);
-  console.log("[web_research] raw model response (first 2000 chars):", payload.slice(0, 2000));
+  const { text, knownDomains } = await runWebResearchCall(state);
+  console.log("[web_research] raw model response (first 2000 chars):", text.slice(0, 2000));
   return {
-    researchPayloads: [payload],
+    researchPayloads: [text],
+    knownDomains,
   };
 }
 
@@ -689,12 +705,19 @@ export async function candidateExtractionNode(
 export async function entityResolutionNode(
   state: SearchPipelineState,
 ): Promise<Partial<SearchPipelineState>> {
+  const knownDomainSet = new Set(state.knownDomains);
   const deduped = new Map<string, ExtractedCandidate>();
 
   for (const candidate of state.extractedCandidates) {
-    const key =
-      getWebsiteDomain(candidate.website) ??
-      normalizeCompanyName(candidate.companyName).toLowerCase();
+    const domain = getWebsiteDomain(candidate.website);
+
+    // Hard-skip candidates whose domain is already in the database
+    if (domain && knownDomainSet.has(domain)) {
+      console.log(`[entity_resolution] skipping known domain "${domain}" (${candidate.companyName})`);
+      continue;
+    }
+
+    const key = domain ?? normalizeCompanyName(candidate.companyName).toLowerCase();
 
     const existing = deduped.get(key);
     if (!existing) {

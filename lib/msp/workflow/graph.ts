@@ -47,6 +47,10 @@ const SearchStateAnnotation = Annotation.Root({
     reducer: replaceReducer,
     default: () => [],
   }),
+  knownDomains: Annotation<string[]>({
+    reducer: replaceReducer,
+    default: () => [],
+  }),
   extractedCandidates: Annotation<SearchPipelineState["extractedCandidates"]>({
     reducer: replaceReducer,
     default: () => [],
@@ -119,6 +123,7 @@ function buildInitialState(params: {
     filters: normalizeSearchFilters(params.filters),
     searchQueries: [],
     researchPayloads: [],
+    knownDomains: [],
     extractedCandidates: [],
     dedupedCandidates: [],
     evaluatedCandidates: [],
