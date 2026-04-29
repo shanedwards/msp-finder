@@ -88,12 +88,12 @@ export function buildWebResearchPrompt(params: {
     "Step 2 — From all search results, compile a list of unique company names and their websites.",
     "  - Use the website URL shown directly in search results whenever possible.",
     "  - Only search for a missing website if the company looks like a strong MSP lead and you have not used many searches yet.",
-    "  - Visit individual company website homepage, services page, and/or solutions page to confirm and collect information about AWS Support, Azure Support, AWS Reseller, and Azure CSP.",
+    "  - Visit individual company website homepage, services page, solutions page, and/or contact/about page to confirm and collect information about AWS Support, Azure Support, AWS Reseller, and Azure CSP.",
     "",
     "Step 3 — For each company on your list, fill in the remaining JSON fields:",
     "  - isMsp: true if the company name, search snippet, homepage, services page, or solutions pages clearly indicates managed services provider for AWS and/or Azure, or is AWS reseller or Azure CSP.",
     "  - awsSupport / azureSupport: true if search snippet, website title, homepage, services page, or solutions page mentions AWS and/or Azure managed services provider..",
-    "  - headquartersState: use the state visible in the search result. If unclear, use the target state.",
+    "  - headquartersState: check the company's Contact page or About Us page footer for a physical address and use the state from that address. If not found there, use the state visible in the search result.",
     "",
 
     // --- MSP definition ---
