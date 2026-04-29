@@ -2,47 +2,66 @@ import { MAX_CANDIDATES, MAX_SEARCH_QUERIES, MAX_SOURCES_FETCHED } from "@/lib/m
 import { ScoredExample } from "@/lib/msp/repository";
 import { NormalizedSearchFilters } from "@/lib/msp/types";
 
-export function buildSearchQueries(filters: NormalizedSearchFilters): string[] {
+export function buildSearchQueryPool(filters: NormalizedSearchFilters): string[] {
   const states = filters.states.length > 0 ? filters.states : ["United States"];
-  // Use full state name for the first state to make searches more natural
   const primaryState = states[0];
   const cityPrefix = filters.city ? `${filters.city} ` : "";
   const locationPrefix = `${cityPrefix}${primaryState}`;
 
-  const queries: string[] = [];
+  const pool: string[] = [];
 
-  // Core local MSP queries — always generated first
-  queries.push(`${locationPrefix} managed service provider`);
-  queries.push(`${locationPrefix} MSP IT services`);
-  queries.push(`${locationPrefix} managed IT services company`);
+  // Core MSP queries
+  pool.push(`${locationPrefix} managed service provider`);
+  pool.push(`${locationPrefix} MSP IT services`);
+  pool.push(`${locationPrefix} managed IT services company`);
+  pool.push(`${locationPrefix} IT managed services firm`);
+  pool.push(`${locationPrefix} IT outsourcing company`);
+  pool.push(`${locationPrefix} IT support managed services`);
 
-  // Always-on cloud-focused queries
-  queries.push(`${locationPrefix} AWS partner cloud services`);
-  queries.push(`${locationPrefix} Azure partner cloud services`);
-  queries.push(`${locationPrefix} cloud consulting firm AWS Azure`);
+  // AWS-focused
+  pool.push(`${locationPrefix} AWS partner cloud services`);
+  pool.push(`${locationPrefix} AWS managed services partner`);
+  pool.push(`${locationPrefix} AWS partner IT managed services`);
+  pool.push(`${locationPrefix} AWS cloud consulting firm`);
+  pool.push(`${locationPrefix} Amazon Web Services reseller partner`);
 
-  // Extra queries when specific cloud filters are enabled
-  if (filters.mustSupportAws || filters.mustHaveAwsResellerEvidence) {
-    queries.push(`${locationPrefix} AWS managed services partner`);
-    queries.push(`${locationPrefix} AWS partner IT managed services`);
+  // Azure-focused
+  pool.push(`${locationPrefix} Azure partner cloud services`);
+  pool.push(`${locationPrefix} Microsoft Gold Partner managed IT`);
+  pool.push(`${locationPrefix} Azure managed services provider`);
+  pool.push(`${locationPrefix} Microsoft Azure cloud consulting`);
+
+  // Cloud-general
+  pool.push(`${locationPrefix} cloud consulting firm AWS Azure`);
+  pool.push(`${locationPrefix} cloud infrastructure services company`);
+  pool.push(`${locationPrefix} cloud reseller IT services`);
+  pool.push(`${locationPrefix} cloud integrator managed services`);
+  pool.push(`${locationPrefix} cloud migration services company`);
+  pool.push(`${locationPrefix} DevOps managed services AWS`);
+  pool.push(`${locationPrefix} cloud operations managed services`);
+
+  // Security & compliance
+  pool.push(`${locationPrefix} cybersecurity managed services provider`);
+  pool.push(`${locationPrefix} MSSP managed security services`);
+
+  // Directory and review sites
+  pool.push(`${locationPrefix} managed service provider site:clutch.co`);
+  pool.push(`${locationPrefix} managed service provider site:linkedin.com`);
+  pool.push(`${locationPrefix} managed IT services site:g2.com`);
+  pool.push(`${locationPrefix} managed services site:channele2e.com`);
+  pool.push(`${locationPrefix} cloud services provider site:crn.com`);
+
+  // Certification / industry angle
+  pool.push(`${locationPrefix} technology services company AWS certified`);
+  pool.push(`${locationPrefix} IT firm SOC2 managed services`);
+
+  // Secondary states
+  for (let i = 1; i < states.length; i++) {
+    pool.push(`${filters.city ? `${filters.city} ` : ""}${states[i]} managed service provider`);
+    pool.push(`${filters.city ? `${filters.city} ` : ""}${states[i]} AWS cloud services`);
   }
 
-  if (filters.mustSupportAzure || filters.mustHaveAzurePartnerEvidence) {
-    queries.push(`${locationPrefix} Microsoft Gold Partner managed IT`);
-  }
-
-  // Local partner directory — location-filtered clutch search
-  queries.push(`${locationPrefix} managed service provider site:clutch.co`);
-
-  // LinkedIn local search
-  queries.push(`${locationPrefix} managed service provider site:linkedin.com`);
-
-  // If multiple states, add queries for secondary states
-  for (let i = 1; i < states.length && queries.length < MAX_SEARCH_QUERIES; i++) {
-    queries.push(`${filters.city ? `${filters.city} ` : ""}${states[i]} managed service provider`);
-  }
-
-  return queries.slice(0, MAX_SEARCH_QUERIES);
+  return pool;
 }
 
 const MAX_EXCLUDED_DOMAINS = 30;

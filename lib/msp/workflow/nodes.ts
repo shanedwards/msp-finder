@@ -1,4 +1,4 @@
-import { MAX_CANDIDATES, MAX_SEARCH_QUERIES, MAX_SOURCES_FETCHED } from "@/lib/msp/constants";
+import { MAX_CANDIDATES, MAX_SEARCH_QUERIES, MAX_SOURCES_FETCHED, RESEARCH_ROUNDS } from "@/lib/msp/constants";
 import { calculateInternalConfidence } from "@/lib/msp/confidence";
 import { composeEvidenceSummaryForEvaluated } from "@/lib/msp/evidence";
 import { getWebsiteDomain, normalizeCompanyName } from "@/lib/msp/formatting";
@@ -12,7 +12,7 @@ import {
 import { CompanySizeTier, ExtractedCandidate, SearchPipelineState } from "@/lib/msp/types";
 import { normalizeStateCode } from "@/lib/msp/us-states";
 import { evaluateVerification } from "@/lib/msp/verification";
-import { buildSearchQueries, buildSeedCompanyPrompt, buildWebResearchPrompt } from "@/lib/msp/workflow/prompts";
+import { buildSearchQueryPool, buildSeedCompanyPrompt, buildWebResearchPrompt } from "@/lib/msp/workflow/prompts";
 import { requireOpenAiApiKey } from "@/lib/env";
 import OpenAI from "openai";
 
@@ -384,7 +384,25 @@ async function lookupWebsiteForCandidate(
   }
 }
 
-async function runWebResearchCall(state: SearchPipelineState): Promise<{ text: string; knownDomains: string[] }> {
+function sampleQueries(pool: string[], count: number, exclude: Set<string>): string[] {
+  const available = pool.filter((q) => !exclude.has(q));
+  const shuffled = available.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+function extractDomainsFromRawText(text: string): string[] {
+  const domains: string[] = [];
+  const urlRegex = /https?:\/\/(?:www\.)?([^/"\s,}]+)/g;
+  for (const match of text.matchAll(urlRegex)) {
+    const domain = match[1]?.toLowerCase().replace(/\.$/, "");
+    if (domain && !domain.includes(" ")) {
+      domains.push(domain);
+    }
+  }
+  return [...new Set(domains)];
+}
+
+async function runMultiRoundWebResearch(state: SearchPipelineState): Promise<{ payloads: string[]; knownDomains: string[] }> {
   const [scoredExamples, lowScoredExamples, knownDomains] = await Promise.all([
     getHighScoredExamples({ states: state.filters.states }).catch(() => []),
     getLowScoredExamples({ states: state.filters.states }).catch(() => []),
@@ -405,33 +423,60 @@ async function runWebResearchCall(state: SearchPipelineState): Promise<{ text: s
     );
   }
 
-  if (knownDomains.length > 0) {
-    console.log(`[web_research] ${knownDomains.length} known domain(s) will be excluded from results`);
-  }
+  console.log(`[web_research] ${knownDomains.length} known domain(s) excluded from all rounds`);
 
-  const prompt = buildWebResearchPrompt({
-    filters: state.filters,
-    queries: state.searchQueries,
-    scoredExamples,
-    lowScoredExamples,
-    knownDomains,
-  });
-
+  const queryPool = buildSearchQueryPool(state.filters);
+  const usedQueries = new Set<string>();
+  const seenThisRun = new Set<string>(knownDomains);
+  const payloads: string[] = [];
   const client = getOpenAiClient();
-  const response = await client.responses.create({
-    model: "gpt-4.1",
-    tools: [{ type: "web_search_preview" as const, search_context_size: "low" as const }],
-    input: prompt,
-    max_output_tokens: 16000,
-    temperature: 0,
-  });
 
-  const text = extractTextFromResponse(response);
-  if (!text) {
-    throw new Error("OpenAI web research returned an empty response.");
+  for (let round = 0; round < RESEARCH_ROUNDS; round++) {
+    const queries = sampleQueries(queryPool, MAX_SEARCH_QUERIES, usedQueries);
+    if (queries.length === 0) {
+      console.log(`[web_research] round ${round + 1}: no unused queries remaining, stopping early`);
+      break;
+    }
+    queries.forEach((q) => usedQueries.add(q));
+
+    console.log(`[web_research] round ${round + 1}/${RESEARCH_ROUNDS} | ${seenThisRun.size} domains excluded | queries:`, queries.join(" | "));
+
+    const prompt = buildWebResearchPrompt({
+      filters: state.filters,
+      queries,
+      scoredExamples,
+      lowScoredExamples,
+      knownDomains: [...seenThisRun],
+    });
+
+    const response = await client.responses.create({
+      model: "gpt-4.1",
+      tools: [{ type: "web_search_preview" as const, search_context_size: "medium" as const }],
+      input: prompt,
+      max_output_tokens: 16000,
+      temperature: 0.4,
+    });
+
+    const text = extractTextFromResponse(response);
+    if (!text) {
+      console.warn(`[web_research] round ${round + 1}: empty response, skipping`);
+      continue;
+    }
+
+    console.log(`[web_research] round ${round + 1} raw response (first 1000 chars):`, text.slice(0, 1000));
+    payloads.push(text);
+
+    // Add domains found this round to the exclusion set for subsequent rounds
+    const roundDomains = extractDomainsFromRawText(text);
+    roundDomains.forEach((d) => seenThisRun.add(d));
+    console.log(`[web_research] round ${round + 1}: extracted ${roundDomains.length} domain(s), exclusion set now ${seenThisRun.size}`);
   }
 
-  return { text, knownDomains };
+  if (payloads.length === 0) {
+    throw new Error("All research rounds returned empty responses.");
+  }
+
+  return { payloads, knownDomains };
 }
 
 function inferSizeTierFromCount(
@@ -572,8 +617,9 @@ export async function intakeNode(
 export async function searchPlanNode(
   state: SearchPipelineState,
 ): Promise<Partial<SearchPipelineState>> {
+  // Store the full pool on state; the multi-round loop samples from it per round
   return {
-    searchQueries: buildSearchQueries(state.filters).slice(0, MAX_SEARCH_QUERIES),
+    searchQueries: buildSearchQueryPool(state.filters),
   };
 }
 
@@ -590,10 +636,10 @@ export async function webResearchNode(
     };
   }
 
-  const { text, knownDomains } = await runWebResearchCall(state);
-  console.log("[web_research] raw model response (first 2000 chars):", text.slice(0, 2000));
+  const { payloads, knownDomains } = await runMultiRoundWebResearch(state);
+  console.log(`[web_research] completed ${payloads.length} round(s), total payloads: ${payloads.length}`);
   return {
-    researchPayloads: [text],
+    researchPayloads: payloads,
     knownDomains,
   };
 }

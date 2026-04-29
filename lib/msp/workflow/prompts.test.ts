@@ -1,16 +1,15 @@
-import { MAX_SEARCH_QUERIES } from "@/lib/msp/constants";
 import { normalizeSearchFilters } from "@/lib/msp/schemas";
-import { buildSearchQueries } from "@/lib/msp/workflow/prompts";
+import { buildSearchQueryPool } from "@/lib/msp/workflow/prompts";
 
-describe("buildSearchQueries", () => {
-  it("caps query breadth based on MAX_SEARCH_QUERIES", () => {
+describe("buildSearchQueryPool", () => {
+  it("returns a pool larger than MAX_SEARCH_QUERIES for multi-round sampling", () => {
     const filters = normalizeSearchFilters({
       states: ["AZ", "CO", "CA", "TX"],
       mustSupportAws: true,
       mustSupportAzure: true,
     });
 
-    const queries = buildSearchQueries(filters);
-    expect(queries.length).toBeLessThanOrEqual(MAX_SEARCH_QUERIES);
+    const pool = buildSearchQueryPool(filters);
+    expect(pool.length).toBeGreaterThan(8);
   });
 });
