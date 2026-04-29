@@ -409,6 +409,10 @@ function companyMatchesFilters(
     return false;
   }
 
+  if (!company.website) {
+    return false;
+  }
+
   const normalizedState = company.headquarters_state
     ? normalizeStateCode(company.headquarters_state)
     : null;

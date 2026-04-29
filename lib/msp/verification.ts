@@ -123,9 +123,14 @@ export function evaluateVerification(
     };
   }
 
-  // Missing website is flagged for review, not hard-rejected. The model often
-  // finds a company by name but fails to confirm its URL from the search results.
   const hasMissingWebsite = !isLikelyRealWebsite(candidate.website);
+
+  if (hasMissingWebsite) {
+    return {
+      status: "rejected",
+      reason: "Rejected: no confirmed website URL could be found for this company.",
+    };
+  }
 
   if (!locationFitsFilters(candidate, filters)) {
     return {
@@ -163,10 +168,6 @@ export function evaluateVerification(
   }
 
   const needsReviewReasons: string[] = [];
-
-  if (hasMissingWebsite) {
-    needsReviewReasons.push("official website URL could not be confirmed");
-  }
 
   if (filters.mustSupportAws && !candidate.awsSupport) {
     needsReviewReasons.push("AWS support could not be confirmed from available sources");
