@@ -16,12 +16,15 @@ export function buildSearchQueries(filters: NormalizedSearchFilters): string[] {
   queries.push(`${locationPrefix} MSP IT services`);
   queries.push(`${locationPrefix} managed IT services company`);
 
-  // Local cloud-focused queries
+  // Always-on cloud-focused queries
+  queries.push(`${locationPrefix} AWS partner cloud services`);
+  queries.push(`${locationPrefix} Azure partner cloud services`);
+  queries.push(`${locationPrefix} cloud consulting firm AWS Azure`);
+
+  // Extra queries when specific cloud filters are enabled
   if (filters.mustSupportAws || filters.mustHaveAwsResellerEvidence) {
     queries.push(`${locationPrefix} AWS managed services partner`);
     queries.push(`${locationPrefix} AWS partner IT managed services`);
-  } else {
-    queries.push(`${locationPrefix} cloud managed services provider`);
   }
 
   if (filters.mustSupportAzure || filters.mustHaveAzurePartnerEvidence) {
@@ -68,8 +71,8 @@ export function buildWebResearchPrompt(params: {
 
   const lines: string[] = [
     // --- Objective ---
-    "You are a research assistant finding real U.S. Managed Services Providers (MSPs) for an internal sales team.",
-    `Find as many MSP companies as possible whose PRIMARY HEADQUARTERS is in: ${locationPhrase}.`,
+    "You are a research assistant finding real U.S. Managed Services Providers (MSPs) or any firm that provides AWS and/or Azure cloud services for an internal sales team.",
+    `Find as many MSP or AWS and/or Azure cloud services companies as possible whose PRIMARY HEADQUARTERS is in: ${locationPhrase}.`,
     `CRITICAL: ONLY include companies headquartered in ${targetStates}. Exclude national MSPs that just have offices there.`,
     "",
 
@@ -77,12 +80,8 @@ export function buildWebResearchPrompt(params: {
     "STRATEGY — maximize the number of companies found:",
     `Step 1 — Run all of these searches and collect every MSP company name + website URL you find in the results:`,
     ...queries.map((q, i) => `  Search ${i + 1}: "${q}"`),
-    ...(searchContext.mustSupportAws ? [
-      `  Search also: AWS Partner Network directory at https://partners.amazonaws.com/search/partners for "${locationPhrase} managed services"`,
-    ] : []),
-    ...(searchContext.mustSupportAzure ? [
-      `  Search also: Microsoft partner directory at https://appsource.microsoft.com/en-us/marketplace/partner-dir for managed services in "${locationPhrase}"`,
-    ] : []),
+    `  Search also: AWS Partner Network directory at https://partners.amazonaws.com/search/partners for "${locationPhrase} managed services"`,
+    `  Search also: Microsoft partner directory at https://appsource.microsoft.com/en-us/marketplace/partner-dir for managed services in "${locationPhrase}"`,
     `  Search also: general web search for "${locationPhrase} managed services provider" to find any additional MSPs not listed in partner directories`,
     "",
     "Step 2 — From all search results, compile a list of unique company names and their websites.",
@@ -91,14 +90,19 @@ export function buildWebResearchPrompt(params: {
     "  - Visit individual company website homepage, services page, solutions page, and/or contact/about page to confirm and collect information about AWS Support, Azure Support, AWS Reseller, and Azure CSP.",
     "",
     "Step 3 — For each company on your list, fill in the remaining JSON fields:",
-    "  - isMsp: true if the company name, search snippet, homepage, services page, or solutions pages clearly indicates managed services provider for AWS and/or Azure, or is AWS reseller or Azure CSP.",
+    "  - isMsp: true if the company name, search snippet, or any page visited clearly indicates a managed services provider, cloud services firm, AWS/Azure partner, reseller, CSP, cloud consultant, or cloud migration/operations firm.",
     "  - awsSupport / azureSupport: true if search snippet, website title, homepage, services page, or solutions page mentions AWS and/or Azure managed services provider..",
     "  - headquartersState: check the company's Contact page or About Us page footer for a physical address and use the state from that address. If not found there, use the state visible in the search result.",
     "",
 
     // --- MSP definition ---
-    "MSP DEFINITION — isMsp: true when:",
+    "MSP DEFINITION — isMsp: true when ANY of the following apply:",
     "- Company sells ongoing managed AWS and/or Azure services",
+    "- Company is an AWS Partner, AWS reseller, or AWS CSP",
+    "- Company is a Microsoft/Azure Partner, Azure reseller, or Azure CSP",
+    "- Company provides cloud migration, cloud consulting, or cloud architecture services on AWS or Azure",
+    "- Company manages AWS or Azure infrastructure on behalf of clients",
+    "- Company offers cloud-managed services, DevOps, or cloud operations on AWS or Azure",
     "",
 
     // --- Disqualifiers ---
