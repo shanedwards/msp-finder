@@ -13,7 +13,7 @@ function getDefaultFilters(): DashboardFilters {
     city: "",
     mustSupportAws: false,
     mustSupportAzure: false,
-    resultLimit: "20",
+    resultLimit: "50",
     extraCriteria: "",
     seedCompanies: "",
     resultsView: "all",
@@ -75,7 +75,7 @@ function toApiFilters(filters: DashboardFilters) {
     mustSupportAzure: filters.mustSupportAzure,
     showOnlyVerified: false,
     includeNeedsReview: true,
-    resultLimit: parseNumberOrNull(filters.resultLimit) ?? 10,
+    resultLimit: parseNumberOrNull(filters.resultLimit) ?? 50,
     extraCriteria: filters.extraCriteria.trim() || null,
     seedCompanies: filters.seedCompanies
       .split("\n")

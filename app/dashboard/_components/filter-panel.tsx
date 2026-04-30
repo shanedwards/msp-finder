@@ -144,7 +144,7 @@ export function FilterPanel({ filters, onChange, onApply, onReset, busy }: Filte
             id="resultLimit"
             type="number"
             min={1}
-            max={20}
+            max={50}
             value={filters.resultLimit}
             onChange={(e) => onChange({ ...filters, resultLimit: e.target.value })}
           />
