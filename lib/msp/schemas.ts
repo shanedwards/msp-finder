@@ -142,6 +142,10 @@ export const searchRequestSchema = z
     { message: "At least one of 'Must support AWS' or 'Must support Azure' must be selected." },
   );
 
+export const exportRequestSchema = z.object({
+  filters: searchFiltersInputSchema.optional(),
+});
+
 export const verifyCompanyRequestSchema = z.object({
   decision: z.enum(["approved", "rejected", "needs_review"]),
   notes: z.string().trim().max(1000).nullable().optional(),

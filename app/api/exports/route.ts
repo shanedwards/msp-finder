@@ -5,15 +5,16 @@ import {
   failExportJob,
   listCompanyRows,
 } from "@/lib/msp/repository";
-import { normalizeSearchFilters, searchRequestSchema } from "@/lib/msp/schemas";
+import { exportRequestSchema, normalizeSearchFilters } from "@/lib/msp/schemas";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 export async function POST(request: Request) {
   let exportJobId: string | null = null;
 
   try {
     const body = await request.json().catch(() => ({}));
-    const parsed = searchRequestSchema.parse(body);
+    const parsed = exportRequestSchema.parse(body);
     const filters = normalizeSearchFilters(parsed.filters ?? {});
 
     exportJobId = await createExportJob({
@@ -46,6 +47,13 @@ export async function POST(request: Request) {
         exportJobId,
         errorMessage: error instanceof Error ? error.message : "Export failed",
       });
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors.map((e) => e.message).join(", ") },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(
