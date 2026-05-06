@@ -42,7 +42,7 @@ npm install
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...   # NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY accepted as alias
 SUPABASE_SERVICE_ROLE_KEY=...
 OPENAI_API_KEY=...
 ENABLE_MOCK_MODE=false
@@ -65,12 +65,13 @@ Pipeline node order:
 1. `intake_node`
 2. `search_plan_node`
 3. `web_research_node`
-4. `candidate_extraction_node`
-5. `entity_resolution_node`
-6. `verification_node`
-7. `confidence_scoring_node`
-8. `persistence_node`
-9. `export_ready_node`
+4. `seed_research_node`
+5. `candidate_extraction_node`
+6. `entity_resolution_node`
+7. `verification_node`
+8. `confidence_scoring_node`
+9. `persistence_node`
+10. `export_ready_node`
 
 ## Deterministic Verification Rules
 Final verification is enforced in code (not model-only):
@@ -90,13 +91,16 @@ Possible outputs:
 - `GET /api/companies/[id]`
 - `POST /api/companies/[id]/verify`
 - `POST /api/companies/[id]/score`
+- `POST /api/companies/[id]/notes`
 - `POST /api/exports`
 
-## Search Bounds (Sync MVP)
-- `MAX_SEARCH_QUERIES = 4`
-- `MAX_SOURCES_FETCHED = 16`
-- `MAX_CANDIDATES = 24`
-- `MAX_FINAL_RESULTS = 12`
+## Search Bounds
+- `MAX_SEARCH_QUERIES = 8`
+- `MAX_SOURCES_FETCHED = 24`
+- `MAX_CANDIDATES = 50`
+- `MAX_FINAL_RESULTS = 50`
+- `RESEARCH_ROUNDS = 3`
+- `DEFAULT_RESULT_LIMIT = 50`
 
 ## Mock Mode
 Set:
